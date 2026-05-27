@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --ink: #111111;
+  --green: #1A7A3A;
+  --red: #C0392B;
+  --paper: #ffffff;
+  --bg-1: #f2f6f3;
+  --bg-2: #eef1f6;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background:
+    radial-gradient(900px 400px at 10% 10%, rgba(26, 122, 58, 0.08), transparent 60%),
+    radial-gradient(700px 380px at 90% 0%, rgba(17, 17, 17, 0.06), transparent 55%),
+    linear-gradient(180deg, var(--bg-1), var(--bg-2));
+}
+
+code {
+  font-family: 'Courier New', monospace;
+}

@@ -1,0 +1,14 @@
+Trip ID,Employee,Segment Type,Origin,Destination,Departure Date,Return Date,Nights,Distance,Cabin Class
+T-001,John Smith,FLIGHT,JFK,LAX,2024-03-10,2024-03-14,,,Economy
+T-001,John Smith,HOTEL,,,2024-03-10,2024-03-14,4,,
+T-001,John Smith,CAR,,,2024-03-10,2024-03-14,,250,
+T-002,Jane Doe,FLIGHT,SFO,LHR,2024-03-15,2024-03-20,,,Business
+T-002,Jane Doe,HOTEL,,,2024-03-15,2024-03-20,5,,
+T-003,Bob Wilson,FLIGHT,ORD,DFW,2024-03-18,2024-03-19,,,Economy
+T-003,Bob Wilson,FLIGHT,DFW,ORD,2024-03-19,,,,Economy
+T-004,Alice Brown,RAIL,,,2024-03-20,2024-03-20,,320,
+T-005,Charlie Lee,FLIGHT,BOS,MIA,2024-03-22,2024-03-25,,,Economy
+T-005,Charlie Lee,HOTEL,,,2024-03-22,2024-03-25,3,,
+T-006,Diana Park,FLIGHT,DEL,BOM,2024-03-25,2024-03-26,,,Economy
+T-006,Diana Park,FLIGHT,BOM,DEL,2024-03-26,,,,Economy
+T-007,Erik Stone,FLIGHT,XXX,JFK,2024-03-28,2024-03-28,,,Economy
