@@ -27,16 +27,16 @@ Breathe ESG is a Django REST + React application for ingesting, normalizing, and
 ## Architecture Diagram
 ```mermaid
 flowchart TD
-  A[File Upload (SAP/Utility/Travel)] -->|API| B(Django Backend)
-  B --> C[Parser & Normalizer]
-  C --> D[RawRecord (Immutable)]
-  C --> E[NormalizedRecord (SI, Scope, Category)]
-  E --> F[Review Workflow]
-  F --> G[ReviewDecision & AuditLog]
-  F --> H[Frontend Dashboard]
+  A["File Upload (SAP/Utility/Travel)"] -->|API| B["Django Backend"]
+  B --> C["Parser & Normalizer"]
+  C --> D["RawRecord (Immutable)"]
+  C --> E["NormalizedRecord (SI, Scope, Category)"]
+  E --> F["Review Workflow"]
+  F --> G["ReviewDecision & AuditLog"]
+  F --> H["Frontend Dashboard"]
   H -->|Actions| F
-  F --> I[Audit Export (CSV)]
-  subgraph Data Storage
+  F --> I["Audit Export (CSV)"]
+  subgraph "Data Storage"
     D
     E
     G
