@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from './api';
-import { DEFAULT_CLIENTS } from './clientOptions';
 
 
 function Dashboard() {
@@ -17,11 +16,11 @@ function Dashboard() {
   useEffect(() => {
     api.get('/clients/').then(res => {
       const clientsData = res.data.results || res.data;
-      setClients(clientsData.length > 0 ? clientsData : DEFAULT_CLIENTS);
+      setClients(clientsData);
     }).catch(err => {
       console.error(err);
-      setApiError('Clients could not be loaded. Using fallback list.');
-      setClients(DEFAULT_CLIENTS);
+      setApiError('Clients could not be loaded from the backend.');
+      setClients([]);
     });
   }, []);
 

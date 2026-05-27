@@ -18,7 +18,35 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load environment variables
-load_dotenv(os.path.join(BASE_DIR, 'breatheesg_backend', '.env'))
+ENV_FILE = BASE_DIR / 'breatheesg_backend' / '.env'
+if ENV_FILE.exists():
+    load_dotenv(ENV_FILE)
+
+
+def _csv_env(name, default):
+    raw_value = os.getenv(name, default)
+    return [item.strip() for item in raw_value.split(',') if item.strip()]
+
+
+def _postgres_database_from_url(database_url):
+    import re
+
+    match = re.match(
+        r'postgres(?:ql)?://(?P<user>[^:]+):(?P<password>[^@]+)@(?P<host>[^/]+)/(?P<name>.+)',
+        database_url,
+    )
+    if not match:
+        return None
+
+    host = match.group('host')
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': match.group('name'),
+        'USER': match.group('user'),
+        'PASSWORD': match.group('password'),
+        'HOST': host.split(':')[0],
+        'PORT': host.split(':')[1] if ':' in host else '5432',
+    }
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -35,7 +63,8 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv(
     'ALLOWED_HOSTS',
     'localhost,127.0.0.1,.onrender.com,.railway.app,Breathe_Esg.onrender.com'
-).split(',')
+)
+ALLOWED_HOSTS = _csv_env('ALLOWED_HOSTS', ALLOWED_HOSTS)
 
 
 # Application definition
@@ -87,57 +116,24 @@ WSGI_APPLICATION = 'breatheesg_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Use DATABASE_URL if available (Render/Railway), else individual vars
-DATABASE_URL = os.getenv('EXTERNAL_DATABASE_URL') or os.getenv('DATABASE_URL')
+database_url = os.getenv('DATABASE_URL') or os.getenv('EXTERNAL_DATABASE_URL')
+parsed_database = _postgres_database_from_url(database_url) if database_url else None
 
-if DATABASE_URL:
-    # Parse DATABASE_URL for dj-database-url style
-    import re
-    match = re.match(
-        r'postgresql://(?P<user>[^:]+):(?P<password>[^@]+)@(?P<host>[^/]+)/(?P<name>.+)',
-        DATABASE_URL
-    )
-    if match:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': match.group('name'),
-                'USER': match.group('user'),
-                'PASSWORD': match.group('password'),
-                'HOST': match.group('host').split(':')[0],
-                'PORT': match.group('host').split(':')[1] if ':' in match.group('host') else '5432',
-            }
-        }
-    else:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': os.getenv('DB_NAME', 'breatheesg'),
-                'USER': os.getenv('DB_USER', 'breatheesg_user'),
-                'PASSWORD': os.getenv('DB_PASSWORD', ''),
-                'HOST': os.getenv('DB_HOST', 'localhost'),
-                'PORT': os.getenv('DB_PORT', '5432'),
-            }
-        }
+if parsed_database:
+    DATABASES = {
+        'default': parsed_database,
+    }
 else:
-    if DEBUG:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'breatheesg'),
+            'USER': os.getenv('DB_USER', 'breatheesg_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
         }
-    else:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': os.getenv('DB_NAME', 'breatheesg'),
-                'USER': os.getenv('DB_USER', 'breatheesg_user'),
-                'PASSWORD': os.getenv('DB_PASSWORD', ''),
-                'HOST': os.getenv('DB_HOST', 'localhost'),
-                'PORT': os.getenv('DB_PORT', '5432'),
-            }
-        }
+    }
 
 
 # Password validation
@@ -191,15 +187,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings — allow React dev server
 CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000,https://Breathe_Esg_Frontend.vercel.app'
-).split(',')
+    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://Breathe_Esg_Frontend.vercel.app'
+)
+CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS', CORS_ALLOWED_ORIGINS)
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all in dev mode
 
 CSRF_TRUSTED_ORIGINS = os.getenv(
     'CSRF_TRUSTED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000,https://Breathe_Esg_Frontend.vercel.app'
-).split(',')
+    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://Breathe_Esg_Frontend.vercel.app'
+)
+CSRF_TRUSTED_ORIGINS = _csv_env('CSRF_TRUSTED_ORIGINS', CSRF_TRUSTED_ORIGINS)
 
 
 # Django REST Framework

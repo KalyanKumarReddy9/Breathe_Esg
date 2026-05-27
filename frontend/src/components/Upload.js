@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from './api';
-import { DEFAULT_CLIENTS } from './clientOptions';
 
 function Upload() {
   const [clients, setClients] = useState([]);
@@ -19,14 +18,18 @@ function Upload() {
     api.get('/clients/')
       .then(res => {
         const clientsData = res.data.results || res.data;
-        const resolvedClients = clientsData.length > 0 ? clientsData : DEFAULT_CLIENTS;
-        setClients(resolvedClients);
-        if (resolvedClients.length > 0) setClientId(resolvedClients[0].id);
+        const testCorpClients = clientsData.filter(c => c.name === 'Test Corp');
+        // Fallback to all if Test Corp is not found to prevent breaking, but preferably only Test Corp
+        const finalClients = testCorpClients.length > 0 ? testCorpClients : clientsData;
+        setClients(finalClients);
+        if (finalClients.length > 0) setClientId(finalClients[0].id);
+        else setError('No clients are available. Please create a client in the backend first.');
       })
       .catch(err => {
         console.error(err);
-        setClients(DEFAULT_CLIENTS);
-        if (DEFAULT_CLIENTS.length > 0) setClientId(DEFAULT_CLIENTS[0].id);
+        setClients([]);
+        setClientId('');
+        setError('Unable to load clients from the backend. Check that the backend is running on port 8000.');
       });
   }, []);
 
@@ -157,7 +160,7 @@ function Upload() {
               'Upload & Parse'
             )}
           </button>
-          {clients.length === 0 && <p className="text-danger text-center mt-2">No clients found. Please add a client above.</p>}
+          {clients.length === 0 && <p className="text-danger text-center mt-2">No clients found. Please add a client in the backend before uploading.</p>}
         </form>
       </div>
     </div>
