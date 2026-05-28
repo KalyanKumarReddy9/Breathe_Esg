@@ -93,7 +93,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'breatheesg_backend.urls'
+ROOT_URLCONF = 'urls'
 
 TEMPLATES = [
     {
@@ -110,7 +110,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'breatheesg_backend.wsgi.application'
+WSGI_APPLICATION = 'wsgi.application'
 
 
 # Database
