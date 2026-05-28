@@ -18,8 +18,7 @@ function Dashboard() {
       const clientsData = res.data.results || res.data;
       setClients(clientsData);
     }).catch(err => {
-      console.error(err);
-      setApiError('Clients could not be loaded from the backend.');
+      setApiError('Clients could not be loaded right now.');
       setClients([]);
     });
   }, []);
@@ -35,8 +34,7 @@ function Dashboard() {
         setLoading(false);
       })
       .catch(err => {
-        console.error(err);
-        setApiError('Batches could not be loaded. Check API connectivity.');
+        setApiError('Batches could not be loaded right now.');
         setLoading(false);
       });
   }, [selectedClient]);
@@ -71,7 +69,7 @@ function Dashboard() {
   return (
     <div>
       {apiError && (
-        <div className="error-alert" style={{ marginBottom: '1rem' }}>
+        <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
           {apiError}
         </div>
       )}

@@ -20,7 +20,7 @@ function BatchReview() {
       setLoading(false);
     })
     .catch(err => {
-      setError('Failed to load data');
+      setError('Batch data could not be loaded.');
       setLoading(false);
     });
   }, [id]);
@@ -66,7 +66,14 @@ function BatchReview() {
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div style={{color: '#C0392B'}}>{error}</div>;
+  if (error) {
+    return (
+      <div className="card" style={{ textAlign: 'center' }}>
+        <p>{error}</p>
+        <button className="btn btn-primary" onClick={fetchBatch}>Try Again</button>
+      </div>
+    );
+  }
 
   return (
     <div className="card">

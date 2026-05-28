@@ -17,11 +17,19 @@ UTILITY_ALIASES = {
     'address': 'facility_address',
     'facility_address': 'facility_address',
     'bill start date': 'period_start',
+    'billing start date': 'period_start',
     'start date': 'period_start',
+    'period start': 'period_start',
+    'service start date': 'period_start',
+    'from date': 'period_start',
     'period_start': 'period_start',
     'billing_start': 'period_start',
     'bill end date': 'period_end',
+    'billing end date': 'period_end',
     'end date': 'period_end',
+    'period end': 'period_end',
+    'service end date': 'period_end',
+    'to date': 'period_end',
     'period_end': 'period_end',
     'billing_end': 'period_end',
     'kwh usage': 'consumption',
@@ -56,6 +64,28 @@ def map_columns(df):
     return df.rename(columns=mapped)
 
 
+def _clean_value(value):
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if pd.isna(value):
+        return ''
+    return str(value).strip()
+
+
+def _sanitize_row(row):
+    return {key: (None if pd.isna(value) else value) for key, value in row.to_dict().items()}
+
+
+def _parse_date_from_row(raw_payload, keys):
+    for key in keys:
+        candidate = _clean_value(raw_payload.get(key))
+        if candidate:
+            return parse_date(candidate)
+    return (None, False, "Invalid date: ''")
+
+
 def parse_utility_file(file_content, batch, client):
     """
     Parse utility CSV export.
@@ -74,33 +104,41 @@ def parse_utility_file(file_content, batch, client):
         return (0, 0, errors)
 
     for idx, row in df.iterrows():
-        raw_payload = row.to_dict()
+        raw_payload = _sanitize_row(row)
         row_errors = []
+        flag_notes = []
 
         # Parse period start
-        start_str = raw_payload.get('period_start', '')
-        start_date, start_ok, start_err = parse_date(str(start_str))
-        if not start_ok:
-            row_errors.append(f"Period start: {start_err}")
+        start_date, start_ok, start_err = _parse_date_from_row(
+            raw_payload,
+            ['period_start', 'billing_start', 'billing_period_start', 'service_start_date', 'from_date'],
+        )
 
         # Parse period end
-        end_str = raw_payload.get('period_end', '')
-        end_date, end_ok, end_err = parse_date(str(end_str))
-        if not end_ok:
+        end_date, end_ok, end_err = _parse_date_from_row(
+            raw_payload,
+            ['period_end', 'billing_end', 'billing_period_end', 'service_end_date', 'to_date'],
+        )
+
+        if not start_ok and end_ok:
+            start_date = end_date
+            flag_notes.append('Period start was missing; used bill end date as the period start.')
+        elif not start_ok:
+            row_errors.append(f"Period start: {start_err}")
+
+        if not end_ok and _clean_value(raw_payload.get('period_end', '')):
             row_errors.append(f"Period end: {end_err}")
 
         # Parse consumption — default unit is kWh
-        consumption_val = raw_payload.get('consumption', '')
+        consumption_val = _clean_value(raw_payload.get('consumption', ''))
         # Remove commas from numbers like "48,320"
-        if isinstance(consumption_val, str):
-            consumption_val = consumption_val.replace(',', '')
-        unit = raw_payload.get('unit', 'kWh')
-        if not unit or unit == 'nan':
+        consumption_val = consumption_val.replace(',', '')
+        unit = _clean_value(raw_payload.get('unit', 'kWh'))
+        if not unit:
             unit = 'kWh'
         norm_qty, si_unit, qty_ok, qty_err = normalize_quantity(consumption_val, str(unit))
         
         is_flagged = False
-        flag_notes = []
 
         if not qty_ok and qty_err:
             # Instead of failing the parse, we import it as 0 and flag it
@@ -122,9 +160,10 @@ def parse_utility_file(file_content, batch, client):
             failed_count += 1
             errors.append(f"Row {idx + 1}: {'; '.join(row_errors)}")
         else:
-            facility = str(raw_payload.get('account_id', ''))
-            if raw_payload.get('meter_id'):
-                facility = f"{facility}/{raw_payload['meter_id']}"
+            facility = _clean_value(raw_payload.get('account_id', ''))
+            meter_id = _clean_value(raw_payload.get('meter_id', ''))
+            if meter_id:
+                facility = f"{facility}/{meter_id}" if facility else meter_id
 
             nr = NormalizedRecord.objects.create(
                 raw_record=raw_record,

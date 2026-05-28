@@ -2,6 +2,8 @@
 Unit normalizer — converts source units to SI base units using the UnitLookup table.
 Falls back to a hardcoded default table if DB entries don't exist.
 """
+import math
+
 from emissions.models import UnitLookup
 
 # Default unit conversions (code → (si_unit, multiplier))
@@ -45,7 +47,10 @@ def get_conversion(unit_code):
     Look up unit conversion. Try DB first, fall back to defaults.
     Returns (si_unit, multiplier) or None if unknown.
     """
-    code_upper = unit_code.strip().upper()
+    code_upper = str(unit_code).strip().upper()
+
+    if code_upper in ('', 'NAN', 'NONE', 'NULL'):
+        return None
 
     # Try DB lookup
     try:
@@ -71,6 +76,9 @@ def normalize_quantity(value, unit_code):
     except (ValueError, TypeError):
         return (None, None, False, f"Cannot convert value '{value}' to number")
 
+    if not math.isfinite(value):
+        return (None, None, False, f"Cannot convert value '{value}' to number")
+
     conversion = get_conversion(unit_code)
     if conversion is None:
         return (value, unit_code, False, f"Unknown unit: '{unit_code}'")
@@ -88,12 +96,23 @@ def parse_date(date_str):
     - YYYY-MM-DD (ISO 8601)
     Returns (date_obj, success, error_msg).
     """
-    from datetime import datetime
+    from datetime import date, datetime
 
-    if not date_str or not isinstance(date_str, str):
-        return (None, False, f"Invalid date: '{date_str}'")
+    if isinstance(date_str, datetime):
+        return (date_str.date(), True, '')
+
+    if isinstance(date_str, date):
+        return (date_str, True, '')
+
+    if date_str is None:
+        return (None, False, "Invalid date: ''")
+
+    if not isinstance(date_str, str):
+        date_str = str(date_str)
 
     date_str = date_str.strip()
+    if not date_str or date_str.lower() in ('nan', 'none', 'null'):
+        return (None, False, "Invalid date: ''")
 
     formats = [
         ('%d.%m.%Y', 'DD.MM.YYYY'),
@@ -101,6 +120,10 @@ def parse_date(date_str):
         ('%Y-%m-%d', 'YYYY-MM-DD'),
         ('%d/%m/%Y', 'DD/MM/YYYY'),
         ('%Y/%m/%d', 'YYYY/MM/DD'),
+        ('%m-%d-%Y', 'MM-DD-YYYY'),
+        ('%d-%m-%Y', 'DD-MM-YYYY'),
+        ('%Y.%m.%d', 'YYYY.MM.DD'),
+        ('%Y-%m-%d %H:%M:%S', 'YYYY-MM-DD HH:MM:SS'),
     ]
 
     for fmt, _label in formats:

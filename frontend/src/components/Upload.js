@@ -26,10 +26,9 @@ function Upload() {
         else setError('No clients are available. Please create a client in the backend first.');
       })
       .catch(err => {
-        console.error(err);
         setClients([]);
         setClientId('');
-        setError('Unable to load clients from the backend. Check that the backend is running on port 8000.');
+        setError('Unable to load clients from the backend.');
       });
   }, []);
 

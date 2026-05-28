@@ -66,6 +66,33 @@ def map_columns(df):
     return df.rename(columns=mapped)
 
 
+def _clean_value(value):
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    if pd.isna(value):
+        return ''
+    return str(value).strip()
+
+
+def _sanitize_row(row):
+    return {key: (None if pd.isna(value) else value) for key, value in row.to_dict().items()}
+
+
+def _parse_float(value, default=None):
+    cleaned = _clean_value(value)
+    if not cleaned:
+        return default
+    try:
+        parsed = float(cleaned)
+    except (TypeError, ValueError):
+        return default
+    if pd.isna(parsed):
+        return default
+    return parsed
+
+
 def parse_travel_file(file_content, batch, client):
     """
     Parse Concur-style travel CSV.
@@ -84,31 +111,33 @@ def parse_travel_file(file_content, batch, client):
         return (0, 0, errors)
 
     for idx, row in df.iterrows():
-        raw_payload = row.to_dict()
+        raw_payload = _sanitize_row(row)
         row_errors = []
 
         # Parse departure date
-        date_str = raw_payload.get('departure_date', '')
-        date_obj, date_ok, date_err = parse_date(str(date_str))
+        date_str = _clean_value(raw_payload.get('departure_date', ''))
+        date_obj, date_ok, date_err = parse_date(date_str)
         if not date_ok:
-            row_errors.append(date_err)
+            row_errors.append(f"Departure date: {date_err}")
 
         # Parse return date (optional)
-        return_str = raw_payload.get('return_date', '')
+        return_str = _clean_value(raw_payload.get('return_date', ''))
         return_date = None
-        if return_str and return_str != 'nan':
-            return_date, _, _ = parse_date(str(return_str))
+        if return_str:
+            return_date, return_ok, return_err = parse_date(return_str)
+            if not return_ok:
+                row_errors.append(f"Return date: {return_err}")
 
         # Determine segment type and calculate quantity
-        segment_type = str(raw_payload.get('segment_type', '')).strip().upper()
+        segment_type = _clean_value(raw_payload.get('segment_type', '')).upper()
         category = SEGMENT_CATEGORIES.get(segment_type, f'Business Travel — {segment_type}')
         quantity = 0.0
         si_unit = 'km'
 
         if segment_type in ('FLIGHT', 'AIR'):
             # Calculate distance from IATA codes
-            origin = str(raw_payload.get('origin', '')).strip()
-            dest = str(raw_payload.get('destination', '')).strip()
+            origin = _clean_value(raw_payload.get('origin', ''))
+            dest = _clean_value(raw_payload.get('destination', ''))
             if origin and dest:
                 dist, dist_ok, dist_err = get_distance_km(origin, dest)
                 if dist_ok:
@@ -120,21 +149,17 @@ def parse_travel_file(file_content, batch, client):
 
         elif segment_type == 'HOTEL':
             # Hotel: quantity = number of nights
-            nights = raw_payload.get('nights', '1')
-            try:
-                quantity = float(nights)
-            except (ValueError, TypeError):
+            nights = _parse_float(raw_payload.get('nights', ''), default=1.0)
+            quantity = 1.0 if nights is None else nights
+            if quantity <= 0:
                 quantity = 1.0
             si_unit = 'nights'
 
         elif segment_type in ('CAR', 'CAR RENTAL'):
             # Car: use stated distance or fallback 100km/day
-            dist_str = raw_payload.get('distance', '')
-            if dist_str and dist_str != 'nan':
-                try:
-                    quantity = float(dist_str)
-                except (ValueError, TypeError):
-                    quantity = 100.0
+            dist_value = _parse_float(raw_payload.get('distance', ''), default=None)
+            if dist_value is not None:
+                quantity = dist_value
             else:
                 # Fallback: 100km per day
                 if date_obj and return_date:
@@ -144,12 +169,9 @@ def parse_travel_file(file_content, batch, client):
                     quantity = 100.0
 
         elif segment_type in ('RAIL', 'TRAIN'):
-            dist_str = raw_payload.get('distance', '')
-            if dist_str and dist_str != 'nan':
-                try:
-                    quantity = float(dist_str)
-                except (ValueError, TypeError):
-                    row_errors.append(f"Cannot parse rail distance: {dist_str}")
+            dist_value = _parse_float(raw_payload.get('distance', ''), default=None)
+            if dist_value is not None:
+                quantity = dist_value
             else:
                 quantity = 0.0
                 row_errors.append("No distance provided for rail segment")

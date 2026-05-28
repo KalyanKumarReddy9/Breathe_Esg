@@ -7,6 +7,8 @@ from rest_framework.test import APIClient
 from emissions.models import Client, IngestionBatch, RawRecord, NormalizedRecord, ReviewDecision, UnitLookup
 from emissions.parsers.sap_parser import parse_sap_file
 from emissions.parsers.normalizer import normalize_quantity
+from emissions.parsers.utility_parser import parse_utility_file
+from emissions.parsers.travel_parser import parse_travel_file
 
 class EmissionsParserTests(TestCase):
     def setUp(self):
@@ -59,6 +61,24 @@ class EmissionsParserTests(TestCase):
         self.assertEqual(rec2.quantity_value, 150.0)
         self.assertEqual(rec2.review_status, 'PENDING')
 
+    def test_utility_parser_accepts_standard_portal_dates(self):
+        csv_content = (
+            "Account Number,Service Address,Bill Start Date,Bill End Date,kWh Usage,Unit,Tariff Code,Meter ID,Demand (kW)\n"
+            "0023456789-01,123 Industrial Blvd,01/18/2024,02/17/2024,48320,kWh,TOU-GS-3-E,MTR-00234,312.4\n"
+        )
+
+        parsed, failed, errors = parse_utility_file(csv_content, self.batch, self.client)
+
+        self.assertEqual(parsed, 1)
+        self.assertEqual(failed, 0)
+        self.assertEqual(errors, [])
+
+        record = NormalizedRecord.objects.filter(batch=self.batch).first()
+        self.assertIsNotNone(record)
+        self.assertEqual(record.quantity_value, 48320.0)
+        self.assertEqual(record.period_start.isoformat(), '2024-01-18')
+        self.assertEqual(record.period_end.isoformat(), '2024-02-17')
+
 
 class EmissionsApiTests(TestCase):
     def setUp(self):
@@ -85,6 +105,26 @@ class EmissionsApiTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(IngestionBatch.objects.count(), 1)
         self.assertEqual(NormalizedRecord.objects.count(), 1)
+
+    def test_travel_parser_sanitizes_missing_values(self):
+        batch = IngestionBatch.objects.create(
+            client=self.client_obj,
+            source_type='TRAVEL',
+            file_name='travel.csv',
+        )
+
+        csv_content = (
+            "Trip ID,Employee,Segment Type,Origin,Destination,Departure Date,Return Date,Nights,Distance,Cabin Class\n"
+            "T-001,John Smith,HOTEL,,,2024-03-10,2024-03-14,NaN,,Economy\n"
+            "T-002,Jane Doe,FLIGHT,SFO,LHR,2024-03-15,2024-03-20,,,Business\n"
+        )
+
+        parsed, failed, errors = parse_travel_file(csv_content, batch, self.client_obj)
+
+        self.assertEqual(parsed, 2)
+        self.assertEqual(failed, 0)
+        self.assertEqual(errors, [])
+        self.assertEqual(NormalizedRecord.objects.filter(batch=batch).count(), 2)
 
     def test_batch_summary_counts(self):
         batch = IngestionBatch.objects.create(
