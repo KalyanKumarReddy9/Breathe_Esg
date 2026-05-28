@@ -187,7 +187,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings — allow React dev server
 CORS_ALLOWED_ORIGINS = os.getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://Breathe_Esg_Frontend.vercel.app,https://breathe-esg-3-0jwy.onrender.com'
+    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://Breathe_Esg_Frontend.vercel.app,https://breathe-esg-3-0jwy.onrender.com,https://breatheesg-pi.vercel.app'
 )
 CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS', CORS_ALLOWED_ORIGINS)
 
@@ -195,7 +195,7 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all in dev mode
 
 CSRF_TRUSTED_ORIGINS = os.getenv(
     'CSRF_TRUSTED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://Breathe_Esg_Frontend.vercel.app,https://breathe-esg-3-0jwy.onrender.com'
+    'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://Breathe_Esg_Frontend.vercel.app,https://breathe-esg-3-0jwy.onrender.com,https://breatheesg-pi.vercel.app'
 )
 CSRF_TRUSTED_ORIGINS = _csv_env('CSRF_TRUSTED_ORIGINS', CSRF_TRUSTED_ORIGINS)
 
